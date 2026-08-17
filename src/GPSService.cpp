@@ -95,6 +95,9 @@ void GPSService::attachToParser(NMEAParser& _parser){
 	_parser.setSentenceHandler("GPGST", [this](const NMEASentence& nmea){
 		this->read_GPGST(nmea);
 	});
+	_parser.setSentenceHandler("GPZDA", [this](const NMEASentence& nmea){
+		this->read_GPZDA(nmea);
+	});
 
     // https://anavs.com/knowledgebase/nmea-format/
 
@@ -122,6 +125,9 @@ void GPSService::attachToParser(NMEAParser& _parser){
     _parser.setSentenceHandler("GLGST", [this](const NMEASentence& nmea){
         this->read_GPGST(nmea);
     });
+    _parser.setSentenceHandler("GLZDA", [this](const NMEASentence& nmea){
+        this->read_GPZDA(nmea);
+    });
 
     _parser.setSentenceHandler("GAGGA", [this](const NMEASentence& nmea){
         this->read_GPGGA(nmea);
@@ -140,6 +146,9 @@ void GPSService::attachToParser(NMEAParser& _parser){
     });
     _parser.setSentenceHandler("GAGST", [this](const NMEASentence& nmea){
         this->read_GPGST(nmea);
+    });
+    _parser.setSentenceHandler("GAZDA", [this](const NMEASentence& nmea){
+        this->read_GPZDA(nmea);
     });
 
 
@@ -160,6 +169,33 @@ void GPSService::attachToParser(NMEAParser& _parser){
     });
     _parser.setSentenceHandler("GNGST", [this](const NMEASentence& nmea){
         this->read_GPGST(nmea);
+    });
+    _parser.setSentenceHandler("GNZDA", [this](const NMEASentence& nmea){
+        this->read_GPZDA(nmea);
+    });
+
+    // GB for BeiDou only solutions
+
+    _parser.setSentenceHandler("GBGGA", [this](const NMEASentence& nmea){
+        this->read_GPGGA(nmea);
+    });
+    _parser.setSentenceHandler("GBGSA", [this](const NMEASentence& nmea){
+        this->read_GPGSA(nmea);
+    });
+    _parser.setSentenceHandler("GBGSV", [this](const NMEASentence& nmea){
+        this->read_GPGSV(nmea);
+    });
+    _parser.setSentenceHandler("GBRMC", [this](const NMEASentence& nmea){
+        this->read_GPRMC(nmea);
+    });
+    _parser.setSentenceHandler("GBVTG", [this](const NMEASentence& nmea){
+        this->read_GPVTG(nmea);
+    });
+    _parser.setSentenceHandler("GBGST", [this](const NMEASentence& nmea){
+        this->read_GPGST(nmea);
+    });
+    _parser.setSentenceHandler("GBZDA", [this](const NMEASentence& nmea){
+        this->read_GPZDA(nmea);
     });
 }
 
@@ -631,6 +667,59 @@ void GPSService::read_GPGST(const NMEASentence& nmea){
 	catch (NMEAParseError& ex)
 	{
 		NMEAParseError pe("GPS Data Bad Format [$GPGST] :: " + ex.message, nmea);
+		throw pe;
+	}
+}
+
+void GPSService::read_GPZDA(const NMEASentence& nmea){
+	/*  -- EXAMPLE --
+	$GPZDA,160012.71,11,03,2004,-1,00*7D
+
+	Where:
+	ZDA          Time and date
+	[0] 160012.71    UTC time
+	[1] 11           Day (01 to 31)
+	[2] 03           Month (01 to 12)
+	[3] 2004         Year
+	[4] -1           Local zone hours offset
+	[5] 00           Local zone minutes offset
+	[5] *7D          the checksum data, always begins with *
+	*/
+
+	try
+	{
+		if (!nmea.checksumOK()){
+			throw NMEAParseError("Checksum is invalid!");
+		}
+
+		if (nmea.parameters.size() < 6){
+			throw NMEAParseError("GPS data is missing parameters.");
+		}
+
+		// TIMESTAMP
+		this->fix.timestamp.setTime(parseDouble(nmea.parameters[0]));
+
+		// DATE
+		if (!nmea.parameters[1].empty() && !nmea.parameters[2].empty()
+				&& !nmea.parameters[3].empty()){
+			int64_t day = parseInt(nmea.parameters[1]);
+			int64_t month = parseInt(nmea.parameters[2]);
+			int64_t year = parseInt(nmea.parameters[3]);
+
+			// same ddmmyy format as the RMC date stamp
+			this->fix.timestamp.setDate((int32_t)(day * 10000 + month * 100 + year % 100));
+		}
+
+		this->onUpdate();
+	}
+	catch (NumberConversionError& ex)
+	{
+		NMEAParseError pe("GPS Number Bad Format [$GPZDA] :: " + ex.message, nmea);
+		throw pe;
+	}
+	catch (NMEAParseError& ex)
+	{
+		NMEAParseError pe("GPS Data Bad Format [$GPZDA] :: " + ex.message, nmea);
 		throw pe;
 	}
 }
