@@ -70,6 +70,7 @@ void GPSService::attachToParser(NMEAParser& _parser){
 	$GPGSV		- number of gps satellites in view, satellite ID, elevation,azimuth, and SNR
 	$GPRMC		- time,date, position,course, and speed data
 	$GPVTG		- course and speed information relative to the ground
+	$GPGST		- position error statistics (pseudorange noise)
 	$GPZDA		- 1pps timing message
 	$PSRF150	- gps module "ok to send"
 	*/
@@ -90,6 +91,9 @@ void GPSService::attachToParser(NMEAParser& _parser){
 	});
 	_parser.setSentenceHandler("GPVTG", [this](const NMEASentence& nmea){
 		this->read_GPVTG(nmea);
+	});
+	_parser.setSentenceHandler("GPGST", [this](const NMEASentence& nmea){
+		this->read_GPGST(nmea);
 	});
 
     // https://anavs.com/knowledgebase/nmea-format/
@@ -115,6 +119,9 @@ void GPSService::attachToParser(NMEAParser& _parser){
     _parser.setSentenceHandler("GLVTG", [this](const NMEASentence& nmea){
         this->read_GPVTG(nmea);
     });
+    _parser.setSentenceHandler("GLGST", [this](const NMEASentence& nmea){
+        this->read_GPGST(nmea);
+    });
 
     _parser.setSentenceHandler("GAGGA", [this](const NMEASentence& nmea){
         this->read_GPGGA(nmea);
@@ -130,6 +137,9 @@ void GPSService::attachToParser(NMEAParser& _parser){
     });
     _parser.setSentenceHandler("GAVTG", [this](const NMEASentence& nmea){
         this->read_GPVTG(nmea);
+    });
+    _parser.setSentenceHandler("GAGST", [this](const NMEASentence& nmea){
+        this->read_GPGST(nmea);
     });
 
 
@@ -147,6 +157,9 @@ void GPSService::attachToParser(NMEAParser& _parser){
     });
     _parser.setSentenceHandler("GNVTG", [this](const NMEASentence& nmea){
         this->read_GPVTG(nmea);
+    });
+    _parser.setSentenceHandler("GNGST", [this](const NMEASentence& nmea){
+        this->read_GPGST(nmea);
     });
 }
 
@@ -561,6 +574,63 @@ void GPSService::read_GPVTG(const NMEASentence& nmea){
 	catch (NMEAParseError& ex)
 	{
 		NMEAParseError pe("GPS Data Bad Format [$GPVTG] :: " + ex.message, nmea);
+		throw pe;
+	}
+}
+
+void GPSService::read_GPGST(const NMEASentence& nmea){
+	/*  -- EXAMPLE --
+	$GPGST,172814.0,0.006,0.023,0.020,273.6,0.023,0.020,0.031*6A
+
+	Where:
+	GST          Position error statistics
+	[0] 172814.0     UTC time of associated position fix
+	[1] 0.006        RMS value of the pseudorange residuals (meters)
+	[2] 0.023        Error ellipse semi-major axis 1-sigma error (meters)
+	[3] 0.020        Error ellipse semi-minor axis 1-sigma error (meters)
+	[4] 273.6        Error ellipse orientation, degrees from true north
+	[5] 0.023        Latitude 1-sigma error (meters)
+	[6] 0.020        Longitude 1-sigma error (meters)
+	[7] 0.031        Altitude 1-sigma error (meters)
+	[7] *6A          the checksum data, always begins with *
+	*/
+
+	try
+	{
+		if (!nmea.checksumOK()){
+			throw NMEAParseError("Checksum is invalid!");
+		}
+
+		if (nmea.parameters.size() < 8){
+			throw NMEAParseError("GPS data is missing parameters.");
+		}
+
+		// TIMESTAMP
+		this->fix.timestamp.setTime(parseDouble(nmea.parameters[0]));
+
+		// PSEUDORANGE RMS
+		this->fix.rangeRMS = parseDouble(nmea.parameters[1]);
+
+		// ERROR ELLIPSE
+		this->fix.semiMajorError = parseDouble(nmea.parameters[2]);
+		this->fix.semiMinorError = parseDouble(nmea.parameters[3]);
+		this->fix.semiMajorOrientation = parseDouble(nmea.parameters[4]);
+
+		// COMPONENT ERRORS
+		this->fix.latitudeError = parseDouble(nmea.parameters[5]);
+		this->fix.longitudeError = parseDouble(nmea.parameters[6]);
+		this->fix.altitudeError = parseDouble(nmea.parameters[7]);
+
+		this->onUpdate();
+	}
+	catch (NumberConversionError& ex)
+	{
+		NMEAParseError pe("GPS Number Bad Format [$GPGST] :: " + ex.message, nmea);
+		throw pe;
+	}
+	catch (NMEAParseError& ex)
+	{
+		NMEAParseError pe("GPS Data Bad Format [$GPGST] :: " + ex.message, nmea);
 		throw pe;
 	}
 }

@@ -164,6 +164,15 @@ namespace nmea {
 		int32_t trackingSatellites;
 		int32_t visibleSatellites;
 
+		// Error statistics from the GST sentence, all 1-sigma, meters
+		double rangeRMS;			// RMS value of pseudorange residuals
+		double semiMajorError;		// error ellipse semi-major axis
+		double semiMinorError;		// error ellipse semi-minor axis
+		double semiMajorOrientation;// orientation of semi-major axis, degrees from true north
+		double latitudeError;		// latitude standard deviation
+		double longitudeError;		// longitude standard deviation
+		double altitudeError;		// altitude standard deviation
+
 		bool locked();
 		double horizontalAccuracy();
 		double verticalAccuracy();

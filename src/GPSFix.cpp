@@ -234,6 +234,13 @@ GPSFix::GPSFix() {
 	trackingSatellites = 0;
 	visibleSatellites = 0;
 
+	rangeRMS = 0;
+	semiMajorError = 0;
+	semiMinorError = 0;
+	semiMajorOrientation = 0;
+	latitudeError = 0;
+	longitudeError = 0;
+	altitudeError = 0;
 
 }
 
@@ -389,7 +396,9 @@ std::string GPSFix::toString(){
 	ss.flags(oldflags);  //reset
 
 	ss << "   DOP (P,H,V):        " << dilution << ",   " << horizontalDilution << ",   " << verticalDilution << endl
-		<< "   Accuracy(H,V):      " << horizontalAccuracy() << " m,   " << verticalAccuracy() << " m" << endl;
+		<< "   Accuracy(H,V):      " << horizontalAccuracy() << " m,   " << verticalAccuracy() << " m" << endl
+		<< "   Error (Lat,Lon,Alt):" << latitudeError << " m,   " << longitudeError << " m,   " << altitudeError << " m  (1-sigma)" << endl
+		<< "   Error Ellipse:      " << semiMajorError << " m x " << semiMinorError << " m @ " << semiMajorOrientation << " deg,   RMS: " << rangeRMS << " m" << endl;
 
 	ss << "   Altitude:           " << altitude << " m" << endl
 		<< "   Speed:              " << speed << " km/h" << endl
