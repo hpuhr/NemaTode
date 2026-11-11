@@ -28,7 +28,7 @@ set(sources
 	src/NumberConversion.cpp
 )
 
-# shared by default (linked by the shared COMPASS libraries), -DBUILD_SHARED_LIBS=OFF for a static library
+# shared by default, -DBUILD_SHARED_LIBS=OFF for a static library
 option(BUILD_SHARED_LIBS "Build NemaTode as a shared library" ON)
 
 add_library(${PROJECT_NAME} ${headers} ${sources})
